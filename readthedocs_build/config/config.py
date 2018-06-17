@@ -419,6 +419,7 @@ class BuildConfig(dict):
                         options.append(validate_string(option))
                 pipenv['options'] = options
 
+        self['pipenv'] = pipenv
         return pipenv
 
     def validate_conf_file(self):

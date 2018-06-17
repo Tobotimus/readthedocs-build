@@ -205,7 +205,7 @@ def describe_validate_pipenv_options():
             {'pipenv': {'options': 'invalid'}})
         with raises(InvalidConfig) as excinfo:
             build.validate_pipenv()
-        assert excinfo.key == 'pipenv.options'
+        assert excinfo.value.key == 'pipenv.options'
         assert excinfo.value.code == PIPENV_INVALID
 
     @patch('readthedocs_build.config.config.validate_string')
