@@ -26,6 +26,7 @@ NAME_INVALID = 'name-invalid'
 CONF_FILE_REQUIRED = 'conf-file-required'
 TYPE_REQUIRED = 'type-required'
 PYTHON_INVALID = 'python-invalid'
+PIPENV_INVALID = 'pipenv-invalid'
 
 DOCKER_DEFAULT_IMAGE = 'readthedocs/build'
 DOCKER_DEFAULT_VERSION = '2.0'
@@ -91,6 +92,9 @@ class BuildConfig(dict):
     PYTHON_INVALID_MESSAGE = '"python" section must be a mapping.'
     PYTHON_EXTRA_REQUIREMENTS_INVALID_MESSAGE = (
         '"python.extra_requirements" section must be a list.')
+    PIPENV_INVALID_MESSAGE = '"pipenv" section must be a mapping.'
+    PIPENV_OPTIONS_INVALID_MESSAGE = (
+        '"pipenv.options" section must be a list of strings.')
 
     PYTHON_SUPPORTED_VERSIONS = [2, 2.7, 3, 3.5]
     DOCKER_SUPPORTED_VERSIONS = ['1.0', '2.0', 'latest']
@@ -171,6 +175,7 @@ class BuildConfig(dict):
 
         self.validate_conda()
         self.validate_requirements_file()
+        self.validate_pipenv()
         self.validate_conf_file()
 
     def validate_output_base(self):
@@ -382,6 +387,39 @@ class BuildConfig(dict):
         self['requirements_file'] = requirements_file
 
         return True
+
+    def validate_pipenv(self):
+        pipenv = {
+            'enabled': False,
+            'options': [],
+        }
+        if 'pipenv' in self.raw_config:
+            raw_pipenv = self.raw_config['pipenv']
+            if not isinstance(raw_pipenv, dict):
+                self.error(
+                    'pipenv',
+                    self.PIPENV_INVALID_MESSAGE,
+                    code=PIPENV_INVALID)
+
+            # Validate pipenv.enabled.
+            if 'enabled' in raw_pipenv:
+                with self.catch_validation_error('pipenv.enabled'):
+                    pipenv['enabled'] = validate_bool(raw_pipenv['enabled'])
+
+            # Validate pipenv.options.
+            if 'options' in raw_pipenv:
+                if not isinstance(raw_pipenv['options'], list):
+                    self.error(
+                        'pipenv.options',
+                        self.PIPENV_OPTIONS_INVALID_MESSAGE,
+                        code=PIPENV_INVALID)
+                options = []
+                with self.catch_validation_error('pipenv.options'):
+                    for option in raw_pipenv['options']:
+                        options.append(validate_string(option))
+                pipenv['options'] = options
+
+        return pipenv
 
     def validate_conf_file(self):
         if 'conf_file' not in self.raw_config:
