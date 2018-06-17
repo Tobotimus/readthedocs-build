@@ -13,6 +13,7 @@ from .config import TYPE_REQUIRED
 from .config import NAME_REQUIRED
 from .config import NAME_INVALID
 from .config import PYTHON_INVALID
+from .config import PIPENV_INVALID
 from .validation import INVALID_BOOL
 from .validation import INVALID_CHOICE
 from .validation import INVALID_DIRECTORY
@@ -162,6 +163,58 @@ def test_build_requires_valid_type():
         build.validate_type()
     assert excinfo.value.key == 'type'
     assert excinfo.value.code == INVALID_CHOICE
+
+
+def test_no_pipenv_section_is_valid():
+    build = get_build_config({})
+    build.validate_pipenv()
+    assert 'pipenv' in build
+
+
+def test_empty_pipenv_section_is_valid():
+    build = get_build_config({'pipenv': {}})
+    build.validate_pipenv()
+    assert 'pipenv' in build
+
+
+def test_pipenv_section_must_be_dict():
+    build = get_build_config({'pipenv': 123})
+    with raises(InvalidConfig) as excinfo:
+        build.validate_pipenv()
+    assert excinfo.value.key == 'pipenv'
+    assert excinfo.value.code == PIPENV_INVALID
+
+
+def test_pipenv_enabled_default():
+    build = get_build_config({'pipenv': {}})
+    build.validate_pipenv()
+    # Default is False.
+    assert build['pipenv']['enabled'] is False
+
+
+def describe_validate_pipenv_options():
+
+    def it_defaults_to_list():
+        build = get_build_config({'pipenv': {}})
+        build.validate_pipenv()
+        # Default is an empty list.
+        assert build['pipenv']['options'] == []
+
+    def it_validates_as_a_list():
+        build = get_build_config(
+            {'pipenv': {'options': 'invalid'}})
+        with raises(InvalidConfig) as excinfo:
+            build.validate_pipenv()
+        assert excinfo.key == 'pipenv.options'
+        assert excinfo.value.code == PIPENV_INVALID
+
+    @patch('readthedocs_build.config.config.validate_string')
+    def it_uses_validate_string(validate_string):
+        validate_string.return_value = True
+        build = get_build_config(
+            {'pipenv': {'options': ['--dev']}})
+        build.validate_pipenv()
+        validate_string.assert_any_call('--dev')
 
 
 def test_empty_python_section_is_valid():
